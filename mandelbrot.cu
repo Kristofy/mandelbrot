@@ -2,6 +2,7 @@
 #include "stb_image_write.h"
 
 #include <cmath>
+#include <ctype>
 #include <cstdint>
 #include <cuda_runtime.h>
 #include <fstream>
@@ -13,7 +14,14 @@ constexpr int WIDTH = 800;
 constexpr int HEIGHT = 600;
 constexpr int MAX_ITERATIONS = 1000;
 constexpr float ZOOM_FACTOR = 0.9;
-constexpr int FRAMES = 10 * 60;
+constexpr int FPS = 30;
+
+bool is_number(const std::string& s)
+{
+    std::string::const_iterator it = s.begin();
+    while (it != s.end() && std::isdigit(*it)) ++it;
+    return !s.empty() && it == s.end();
+}
 
 struct Color
 {
@@ -61,8 +69,10 @@ __global__ void generateMandelbrot(uint8_t* image, float zoom, float centerX, fl
     image[(y * WIDTH + x) * 3 + 2] = color.blue;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+    int frames = FPS * (argc > 1 && is_number(argv[1]) ? atoi(argv[1]) : 10);
+    
     constexpr dim3 block(16, 16);
     constexpr dim3 grid((WIDTH + block.x - 1) / block.x, (HEIGHT + block.y - 1) / block.y);
 
@@ -74,7 +84,7 @@ int main()
     float centerX = -1.4002;  // X-coordinate of the center of the zoom
     float centerY = 0.0;   // Y-coordinate of the center of the zoom
 
-    for (int frame = 0; frame < FRAMES; frame++)
+    for (int frame = 0; frame < frames; frame++)
     {
         float zoom = std::sqrt(frame + 1) * ZOOM_FACTOR;
         generateMandelbrot<<<grid, block>>>(deviceImage, zoom, centerX, centerY);
