@@ -16,6 +16,7 @@ constexpr int MAX_ITERATIONS = 1000;
 constexpr float ZOOM_FACTOR = 0.9;
 constexpr int FPS = 30;
 
+// check if string is a integer (does not check for overflow or negative numbers)
 bool is_number(const std::string& s)
 {
     std::string::const_iterator it = s.begin();
@@ -32,6 +33,7 @@ struct Color
     __device__ Color(uint8_t r, uint8_t g, uint8_t b) : red(r), green(g), blue(b) {}
 };
 
+// get a "random" color based on the interations after which the iteration producing the mandelbrot set becomes unsable
 __device__ Color getColor(int iteration)
 {
     int red = (iteration % 8) * 32;
@@ -41,6 +43,7 @@ __device__ Color getColor(int iteration)
     return Color(red, green, blue);
 }
 
+// kelnel to quickly generate mandelbrot set interations by pixel
 __global__ void generateMandelbrot(uint8_t* image, float zoom, float centerX, float centerY)
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -49,6 +52,7 @@ __global__ void generateMandelbrot(uint8_t* image, float zoom, float centerX, fl
     if (x >= WIDTH || y >= HEIGHT)
         return;
 
+    // the actuall mandelbrot set interations, accounting for a shift and a zoom level
     float zx = 0.0;
     float zy = 0.0;
     float cx = centerX + (x - WIDTH / 2) / (0.5 * zoom * WIDTH);
@@ -92,6 +96,8 @@ int main(int argc, char* argv[])
 
         cudaMemcpy(hostImage, deviceImage, WIDTH * HEIGHT * 3 * sizeof(uint8_t), cudaMemcpyDeviceToHost);
         snprintf(filename, sizeof(filename), "./frames/frame%d.png", frame);
+        
+        // Writing the Image to disk
         stbi_write_png(filename, WIDTH, HEIGHT, 3, hostImage, WIDTH * 3);
     }
 
